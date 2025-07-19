@@ -242,6 +242,9 @@ def figure_to_img(fig):
 
 from render import render, Model
 import math
+import matplotlib.pyplot as plt
+import numpy as np
+from PIL import Image, ImageDraw
 axis_model = Model("./assets/axis.obj", texture_filename="./assets/axis.png")
 def render_3D_axis(phi, theta, gamma):
     radius = 240
@@ -258,6 +261,58 @@ def render_3D_axis(phi, theta, gamma):
     )
     img = img.rotate(gamma)
     return img
+
+def draw_3d_vector_projection(phi, theta, gamma, img_size=(512, 512), line_length=200):
+    """
+    Draw a 2D projection of the 3D head orientation vector on an image.
+    
+    Args:
+        phi (float): Vertical rotation (pitch) in radians
+        theta (float): Horizontal rotation (yaw) in radians
+        gamma (float): Head tilt (roll) in degrees
+        img_size (tuple): Size of the output image (width, height)
+        line_length (int): Length of the vector line in pixels
+        
+    Returns:
+        PIL.Image: Image with the 3D vector projection drawn on it
+    """
+    # Create a new transparent image
+    width, height = img_size
+    result = Image.new('RGBA', (width, height), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(result)
+    
+    # Calculate the 2D projection of the 3D vector
+    gamma_rad = np.radians(gamma)
+    x, y, _ = get_proj2D_XYZ(phi, theta, gamma_rad)
+    
+    # Scale the vector to the desired length
+    vector = np.array([x[0], x[1]]) * line_length
+    
+    # Calculate start (center) and end points
+    center = np.array([width // 2, height // 2])
+    end_point = center + vector.astype(int)
+    
+    # Draw the vector
+    draw.line([tuple(center), tuple(end_point)], fill='red', width=3)
+    
+    # Draw an arrow head
+    arrow_size = 15
+    angle = np.arctan2(vector[1], vector[0])
+    arrow_angle1 = angle + np.radians(150)
+    arrow_angle2 = angle - np.radians(150)
+    
+    arrow_point1 = (
+        int(end_point[0] + arrow_size * np.cos(arrow_angle1)),
+        int(end_point[1] + arrow_size * np.sin(arrow_angle1))
+    )
+    arrow_point2 = (
+        int(end_point[0] + arrow_size * np.cos(arrow_angle2)),
+        int(end_point[1] + arrow_size * np.sin(arrow_angle2))
+    )
+    
+    draw.polygon([tuple(end_point), arrow_point1, arrow_point2], fill='red')
+    
+    return result
 
 def overlay_images_with_scaling(center_image: Image.Image, background_image, target_size=(512, 512)):
     """

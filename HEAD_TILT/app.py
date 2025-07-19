@@ -38,18 +38,42 @@ def infer_func(img, do_rm_bkg, do_infer_aug):
         rm_bkg_img = background_preprocess(origin_img, do_rm_bkg)
         angles = get_3angle(rm_bkg_img, dino, val_preprocess, device)
     
-    phi   = np.radians(angles[0])
-    theta = np.radians(angles[1])
-    gamma = angles[2]
+    phi_deg = angles[0]
+    theta_deg = angles[1]
+    gamma_deg = angles[2]
+    phi = np.radians(phi_deg)
+    theta = np.radians(theta_deg)
+    gamma = gamma_deg
     confidence = float(angles[3])
+    
     if confidence > 0.5:
+        # Create the 3D axis visualization
         render_axis = render_3D_axis(phi, theta, gamma)
+        
+        # Create the 2D vector projection
+        vector_projection = draw_3d_vector_projection(phi, theta, gamma, img_size=rm_bkg_img.size)
+        
+        # First overlay the axis visualization
         res_img = overlay_images_with_scaling(render_axis, rm_bkg_img)
+        
+        # Ensure both images are RGBA and the same size
+        res_img_rgba = res_img.convert('RGBA')
+        vector_projection = vector_projection.convert('RGBA')
+        
+        # Resize vector projection to match the result image if needed
+        if vector_projection.size != res_img_rgba.size:
+            vector_projection = vector_projection.resize(res_img_rgba.size, Image.Resampling.LANCZOS)
+        
+        # Then overlay the vector projection on top of everything
+        res_img = Image.alpha_composite(res_img_rgba, vector_projection)
     else:
         res_img = img
     
-    # axis_model = "axis.obj"
-    return [res_img, round(float(angles[0]), 2), round(float(angles[1]), 2), round(float(angles[2]), 2), round(float(angles[3]), 2)]
+    return [res_img, 
+            round(float(phi_deg), 2), 
+            round(float(theta_deg), 2), 
+            round(float(gamma_deg), 2), 
+            round(float(confidence), 2)]
 
 server = gr.Interface(
     flagging_mode='never',
