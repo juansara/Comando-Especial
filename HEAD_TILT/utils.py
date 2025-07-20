@@ -312,7 +312,7 @@ def draw_3d_vector_projection(phi, theta, gamma, img_size=(512, 512), line_lengt
     
     draw.polygon([tuple(end_point), arrow_point1, arrow_point2], fill='red')
     
-    return result
+    return result, [[int(center[0]), int(center[1])], [int(end_point[0]), int(end_point[1])]]
 
 def overlay_images_with_scaling(center_image: Image.Image, background_image, target_size=(512, 512)):
     """
